@@ -1,46 +1,96 @@
-const { json } = require("express");
+const router = require("express").Router();
+const util = require("util")
 const fs = require("fs");
-// npm id package (uuid) require setup
+// npm id package (uuid) require request
 const {v4: uuidv4} = require('uuid');
-//const db = require("..db/db.json")
 
+const readFileAsync = util.promisify(fs.readFile)
+const writeFileAsync = util.promisify(fs.writeFile)
 
+function readTheFile(){
+  return readFileAsync("db/db.json", "utf8")
+}
+
+function writeTheFile(data){
+  return writeFileAsync("db/db.json", JSON.stringify(data))
+  // writeFileAsync("db/db.json", JSON.stringify(data))
+  //   .then(() => console.log("wrote to file"))
+  //   .catch(err => console.log(err))
+}
 // get fresh notes each time get request sent
-module.exports = function (app) {
-  app.get("/api/notes", function (req, res) {
-    var db= fs.readFile("../db/db.json");
-    db= JSON.parse(db)
 
-    res.send(db);
-  });
+router.get("/notes", function (req, res) {
+  // fs.readFile("db/db.json", "utf8", function(err, log){
+  //   if(err){console.log(err)}
+  //   var notes = log
+  //   console.log(notes)
+  //   res.json(notes)
+  // })
+  readTheFile()
+    .then(notes => {
+      console.log(notes)
+      res.json(notes)
+    })
+    .catch(err => console.log(err))
+  // readTheFile().then(notes => {
+  //   var parsedNotes = [].concat(JSON.parse(notes.join("")))
+  //   console.log(parsedNotes)    
+  //   res.send(parsedNotes);
+  // })
+});
 // Set notes routes
-  app.post("/api/notes", function (req, res) {
-    var newNote = {
-      id: uuidv4(),
-      title: req.body.title,
-      text: req.body.text
-    };
-    //read 
-    var db= fs.readFile("../db/db.json");
-    //parse
-   db= JSON.parse(db)
-    //push
-    db.push(newNote);
-    //write
-    fs.writeFile("..db/db.json",JSON.stringify(db))
-    res.send(newNote);
-  });
+router.post("/notes", function (req, res) {
+  var newNote = {
+    id: uuidv4(),
+    title: req.body.title,
+    text: req.body.text
+  };
+
+  readTheFile()
+    .then(notes => {
+      console.log(notes)
+      notes = JSON.parse(notes)
+      notes.push(newNote)
+      writeTheFile(notes)
+      .then(() =>  res.json(notes))
+      .catch(err => console.log(err))
+    })
+    .catch(err => console.log(err))
+  // fs.readFile("db/db.json", "utf8", function(err, log){
+  //   if(err){console.log(err)}
+  //   console.log(log)
+  //   var notes = JSON.parse(log)
+  //   console.log(notes)
+  //   var newNotes = notes.push(newNote)
+  //   fs.writeFileSync("db/db.json", JSON.stringify(newNotes), function(err){
+  //     if(err){console.log(err)}
+  //   })
+  //   res.json(newNotes)
+  // })
+    // var notes = readTheFile()
+    // var newNotes = [...notes, newNote]
+    // writeTheFile(newNotes)
+    // res.send(newNotes);
+  
+  
+  //push
+  
+  //write
+});
 // delete function
 
-  app.delete("/api/notes/:id", function (req, res) {
+router.delete("/notes/:id", function (req, res) {
+  var notes=readTheFile();
+  var noteID = req.params.id //[1,2,3]
+  var newNotes = notes.filter(note => note.id !== noteID)
+  fs.writeFile("db/db.json",JSON.stringify(newNotes))
+  // for (var i = 0; i < db.length; i++) {
+  //   if (db[i].id === noteID) {
+  //     let objIndex = db.indexOf(db);
+  //     db.splice(objIndex, 1);
+  //   }
+  //   res.send(db);
+  // }
+});
 
-    var noteID = req.params.id
-    for (var i = 0; i < db.length; i++) {
-      if (db[i].id === noteID) {
-        let objIndex = db.indexOf(db);
-        db.splice(objIndex, 1);
-      }
-      res.send(db);
-    }
-  });
-};
+module.exports = router
