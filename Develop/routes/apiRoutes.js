@@ -1,10 +1,16 @@
+const { json } = require("express");
 const fs = require("fs");
 // npm id package (uuid) require setup
 const {v4: uuidv4} = require('uuid');
-const db = require("..db/db.json")
+//const db = require("..db/db.json")
 
+
+// get fresh notes each time get request sent
 module.exports = function (app) {
   app.get("/api/notes", function (req, res) {
+    var db= fs.readFile("../db/db.json");
+    db= JSON.parse(db)
+
     res.send(db);
   });
 // Set notes routes
@@ -14,7 +20,14 @@ module.exports = function (app) {
       title: req.body.title,
       text: req.body.text
     };
+    //read 
+    var db= fs.readFile("../db/db.json");
+    //parse
+   db= JSON.parse(db)
+    //push
     db.push(newNote);
+    //write
+    fs.writeFile("..db/db.json",JSON.stringify(db))
     res.send(newNote);
   });
 // delete function
